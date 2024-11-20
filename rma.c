@@ -13,52 +13,47 @@ int main(int argc, char *argv[]) {
 
     int v1[SIZE];
 
-    // Inicialización de v1
+    // Initialize v1
     for (int i = 0; i < SIZE; i++) {
         if (rank == 0)
-            v1[i] = USERID + i; // Valores iniciales para rank 0
+            v1[i] = USERID + i; // Initial values for rank 0
         else if (rank == 1)
-            v1[i] = (USERID - i) * (-1); // Valores iniciales para rank 1
+            v1[i] = (USERID - i) * (-1); // Initial values for rank 1
     }
 
-    // Impresión inicial del vector en ambos procesos
+    // Print initial vector values in both processes
     for (int i = 0; i < SIZE; i++) 
         printf("[%d/%d] index %d value %d\n", rank, size, i, v1[i]);
 
-    // Crear una ventana de memoria para RMA
+    // Create a memory window for RMA
     MPI_Win win;
     MPI_Win_create(v1, SIZE * sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
 
-    // Intercambio de datos usando RMA
+    // Data exchange using RMA
     if (rank == 0) {
-        MPI_Win_fence(0, win); // Sincronización para leer los datos del rank 1
+        MPI_Win_fence(0, win); // Synchronize to read data from rank 1
 
-        // Obtener valores de índices impares desde rank 1
+        // Get odd-index values from rank 1
         for (int i = 1; i < SIZE; i += 2) {
             int temp;
             MPI_Get(&temp, 1, MPI_INT, 1, i, 1, MPI_INT, win);
-            v1[i] = temp; // Actualizar los valores impares en rank 0
+            v1[i] = temp; // Update odd-index values in rank 0
         }
 
-        MPI_Win_fence(0, win); // Sincronización final
+        MPI_Win_fence(0, win); // Final synchronization
     } else if (rank == 1) {
-        MPI_Win_fence(0, win); // Sincronización para que rank 0 lea los datos
-        MPI_Win_fence(0, win); // Sincronización final
+        MPI_Win_fence(0, win); // Synchronize for rank 0 to read data
+        MPI_Win_fence(0, win); // Final synchronization
     }
 
-    // Impresión final en rank 0
+    // Print final vector values in rank 0
     if (rank == 0) {
-        printf("\nFinal vector in rank 0:\n{");
-        for (int i = 0; i < SIZE; i++) {
-            printf("%d", v1[i]);
-            if (i < SIZE - 1) printf(", ");
-        }
-        printf("}\n");
+        for (int i = 0; i < SIZE; i++) 
+            printf("Final [%d/%d] index %d value %d\n", rank, size, i, v1[i]);
     }
 
-    // Liberar recursos
+    // Free the memory window
     MPI_Win_free(&win);
     MPI_Finalize();
     return 0;
 }
-
